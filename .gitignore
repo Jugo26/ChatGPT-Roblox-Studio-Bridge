@@ -1,0 +1,25 @@
+# Secrets and machine-specific configuration
+token.txt
+*.rbxmx
+plugin.lua
+.env
+*.key
+
+# Runtime relay jobs and logs
+jobs/
+inflight/
+results/
+bridge_server.log
+agent_job.json
+
+# Python local output
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
