@@ -8,6 +8,7 @@ import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import socket
 
 ROOT = Path(__file__).resolve().parent
 TOKEN = (ROOT / "token.txt").read_text(encoding="utf-8").strip()
@@ -30,6 +31,16 @@ def json_response(handler, status, value):
     handler.send_header("Cache-Control", "no-store")
     handler.end_headers()
     handler.wfile.write(raw)
+
+
+class ExclusiveBridgeServer(ThreadingHTTPServer):
+    # No SO_REUSEADDR: prevents two servers from sharing port 48765.
+    allow_reuse_address = False
+
+    def server_bind(self):
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -112,7 +123,10 @@ def main():
     args = parser.parse_args()
     if args.host not in ("127.0.0.1", "localhost"):
         raise SystemExit("only loopback hosts are supported")
-    server = ThreadingHTTPServer((args.host, args.port), Handler)
+    try:
+        server = ExclusiveBridgeServer((args.host, args.port), Handler)
+    except OSError as exc:
+        raise SystemExit(f"Bridge could not bind {args.host}:{args.port}; close the duplicate server: {exc}") from exc
     print(f"ChatGPT Studio Bridge on http://{args.host}:{args.port}", flush=True)
     print("Open Roblox Studio > Plugins > ChatGPT Bridge > CONECTAR", flush=True)
     try:
